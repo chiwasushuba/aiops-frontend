@@ -1,7 +1,14 @@
-const LoginPage = () => {
-  return (
-    <div>Page</div>
-  )
-}
+import { Link } from "react-router-dom";
 
-export default LoginPage
+const LoginPage = () => (
+  <main className="auth-placeholder">
+    <h1>Sign in is not available in this demo.</h1>
+    <p>
+      This is a browser-local prototype with sample data. There is no account or
+      remote data access yet.
+    </p>
+    <Link to="/">Open the demo dashboard</Link>
+  </main>
+);
+
+export default LoginPage;
