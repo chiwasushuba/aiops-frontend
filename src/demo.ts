@@ -6,6 +6,7 @@ export interface Task {
   dueDate: string | null;
   priority: Priority;
   completed: boolean;
+  repeat?: "daily" | "weekly";
 }
 
 export interface DatedItem {
@@ -34,6 +35,7 @@ export interface Conversation {
   id: string;
   title: string;
   messages: ChatMessage[];
+  agentId?: string;
 }
 
 export interface DemoData {
@@ -94,6 +96,14 @@ export function seedDemoData(): DemoData {
         dueDate: dateOffset(1),
         priority: "normal",
         completed: false,
+      },
+      {
+        id: "demo-task-routine",
+        title: "Weekly reset",
+        dueDate: dateOffset(2),
+        priority: "normal",
+        completed: false,
+        repeat: "weekly",
       },
       {
         id: "demo-task-4",
@@ -176,7 +186,9 @@ function validTask(value: unknown): value is Task {
     (value.priority === "low" ||
       value.priority === "normal" ||
       value.priority === "high") &&
-    typeof value.completed === "boolean"
+    typeof value.completed === "boolean" &&
+    (value.repeat === undefined || value.repeat === "daily" || value.repeat === "weekly") &&
+    (value.repeat === undefined || value.dueDate !== null)
   );
 }
 function validEvent(value: unknown): value is DatedItem {
@@ -218,7 +230,8 @@ function validConversation(value: unknown): value is Conversation {
     typeof value.id === "string" &&
     typeof value.title === "string" &&
     Array.isArray(value.messages) &&
-    value.messages.every(validMessage)
+    value.messages.every(validMessage) &&
+    (value.agentId === undefined || typeof value.agentId === "string")
   );
 }
 function isDemoData(value: unknown): value is DemoData {
@@ -391,6 +404,25 @@ export function dueForToday(
   today = localDateKey(new Date()),
 ): boolean {
   return !task.completed && task.dueDate !== null && task.dueDate <= today;
+}
+
+export function toggleTaskCompletion(task: Task, today = localDateKey(new Date())): Task {
+  if (task.completed) return { ...task, completed: false };
+  if (!task.repeat || !task.dueDate) return { ...task, completed: true };
+  const next = new Date(`${task.dueDate}T12:00:00`);
+  const step = task.repeat === "daily" ? 1 : 7;
+  do {
+    next.setDate(next.getDate() + step);
+  } while (localDateKey(next) <= today);
+  return { ...task, dueDate: localDateKey(next), completed: false };
+}
+
+export function reminderIsActive(event: DatedItem, now = new Date()): boolean {
+  if (event.reminderAt === null) return false;
+  const current = now.getTime();
+  const reminder = new Date(event.reminderAt).getTime();
+  const graceEnd = new Date(event.startsAt).getTime() + 30 * 60_000;
+  return reminder <= current && current <= graceEnd;
 }
 
 export function reminderIsOverdue(event: DatedItem, now = new Date()): boolean {

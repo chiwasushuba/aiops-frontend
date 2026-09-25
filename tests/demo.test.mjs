@@ -6,6 +6,7 @@ import {
   localDateKey,
   readDemoData,
   reminderIsOverdue,
+  reminderIsActive,
   resolveSuggestion,
   seedDemoData,
   STORAGE_KEY,
@@ -111,6 +112,17 @@ test("an overdue reminder only applies while its event is upcoming", () => {
     ),
     false,
   );
+});
+
+test("active reminder still appears when the start-time check runs seconds late", () => {
+  const item = {
+    id: "start-reminder",
+    title: "Meeting",
+    startsAt: "2026-09-25T10:00:00Z",
+    reminderAt: "2026-09-25T10:00:00Z",
+  };
+  assert.equal(reminderIsActive(item, new Date("2026-09-25T10:00:30Z")), true);
+  assert.equal(reminderIsActive(item, new Date("2026-09-25T10:31:00Z")), false);
 });
 
 test("failed demo reply can retry without adding another user message", () => {

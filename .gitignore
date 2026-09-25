@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 .codex/
-docs/
+.vercel/

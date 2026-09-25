@@ -1,13 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, NavLink, Outlet, useSearchParams } from "react-router-dom";
 import { DemoProvider } from "./DemoContext";
+import { WorkspaceProvider } from "./WorkspaceContext";
+import { useWorkspace } from "./useWorkspace";
 import { useDemo } from "./useDemo";
 import {
   dueForToday,
   localDateKey,
   localDateTimeValue,
   reminderIsOverdue,
+  reminderIsActive,
   resolveSuggestion,
+  toggleTaskCompletion,
   type SuggestionDecision,
   type ChatMessage,
   type DatedItem,
@@ -16,6 +20,7 @@ import {
   type Task,
 } from "./demo";
 import "./App.css";
+import "./Workspace.css";
 
 type IconName =
   | "home"
@@ -112,14 +117,58 @@ function taskWhen(task: Task) {
       : `Due ${shortDate.format(dateAtNoon(task.dueDate))}`;
 }
 
+function ActiveReminders() {
+  const { data } = useDemo();
+  const now = useCurrentTime();
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  useEffect(() => {
+    if (!data || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    data.events.forEach((item) => {
+      if (!reminderIsActive(item, new Date(now))) return;
+      const key = `aiops-reminder:${item.id}:${item.reminderAt}`;
+      try {
+        if (window.sessionStorage.getItem(key) !== "1") {
+          new Notification("AIOps reminder", { body: item.title });
+          window.sessionStorage.setItem(key, "1");
+        }
+      } catch {
+        // The in-app reminder remains visible when browser notifications are blocked.
+      }
+    });
+  }, [data, now]);
+  if (!data) return null;
+  const due = data.events.filter((item) =>
+    reminderIsActive(item, new Date(now)) &&
+    !dismissed.includes(`${item.id}:${item.reminderAt}`),
+  );
+  if (!due.length) return null;
+  return (
+    <section className="active-reminders" role="status" aria-label="Due reminders">
+      <strong>Reminder due</strong>
+      {due.map((item) => (
+        <div key={item.id}>
+          <span>{item.title} at {time.format(new Date(item.startsAt))}</span>
+          <button type="button" onClick={() => setDismissed((current) => [...current, `${item.id}:${item.reminderAt}`])}>Dismiss</button>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function Shell() {
   const { data, error, reload, reset } = useDemo();
+  const { data: workspace, error: workspaceError, reload: reloadWorkspace, reset: resetWorkspace } = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
   const nav: { to: string; label: string; icon: IconName; end?: boolean }[] = [
     { to: "/", label: "Today", icon: "home", end: true },
     { to: "/tasks", label: "Tasks", icon: "check" },
     { to: "/calendar", label: "Calendar", icon: "calendar" },
     { to: "/assistant", label: "Assistant", icon: "chat" },
+    { to: "/agents", label: "Agents", icon: "spark" },
+    { to: "/work", label: "Work queue", icon: "check" },
+    { to: "/approvals", label: "Approvals", icon: "clock" },
+    { to: "/connections", label: "Connections", icon: "calendar" },
+    { to: "/inbox", label: "Capture inbox", icon: "plus" },
   ];
   return (
     <div className="app-layout">
@@ -202,28 +251,27 @@ function Shell() {
                   "Replace your local demo changes with the original sample data?",
                 )
               )
-                reset();
+                { reset(); resetWorkspace(); }
             }}
           >
             Reset sample
           </button>
         </div>
-        {error && (
+        {(error || workspaceError) && (
           <div className="error-banner" role="alert">
-            {error}{" "}
-            <button type="button" onClick={reload}>
-              Retry
-            </button>
+            {error || workspaceError}{" "}
+            <button type="button" onClick={() => { reload(); reloadWorkspace(); }}>Retry</button>
           </div>
         )}
+        <ActiveReminders />
         <main className="page-content">
-          {data ? (
+          {data && workspace ? (
             <Outlet />
           ) : (
             <div className="empty-state">
               <h1>Demo data is unavailable</h1>
               <p>Check browser storage settings, or reset the sample data.</p>
-              <button className="button primary" type="button" onClick={reset}>
+              <button className="button primary" type="button" onClick={() => { reset(); resetWorkspace(); }}>
                 Reset sample data
               </button>
             </div>
@@ -237,7 +285,9 @@ function Shell() {
 export default function App() {
   return (
     <DemoProvider>
-      <Shell />
+      <WorkspaceProvider>
+        <Shell />
+      </WorkspaceProvider>
     </DemoProvider>
   );
 }
@@ -310,6 +360,7 @@ function TaskRow({
           </span>
           <span className={`priority-dot ${task.priority}`} />
           {task.priority} priority
+          {task.repeat && <span>Repeats {task.repeat}</span>}
         </div>
       </div>
       {(edit || remove) && (
@@ -405,6 +456,7 @@ function EventRow({
 
 export function Dashboard() {
   const { data, commit } = useDemo();
+  const { data: workspace } = useWorkspace();
   const now = useCurrentTime();
   if (!data) return null;
   const todayTasks = data.tasks
@@ -426,7 +478,7 @@ export function Dashboard() {
     commit((current) => ({
       ...current,
       tasks: current.tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task,
+        task.id === id ? toggleTaskCompletion(task) : task,
       ),
     }));
   return (
@@ -546,7 +598,7 @@ export function Dashboard() {
             <Link
               to={
                 suggestion
-                  ? `/assistant?conversation=${suggestion.conversation.id}`
+                  ? `/assistant?agent=${suggestion.conversation.agentId ?? "general"}&conversation=${suggestion.conversation.id}`
                   : "/assistant"
               }
               className="teaser-link"
@@ -554,6 +606,12 @@ export function Dashboard() {
               {suggestion ? "Review suggestion" : "Open assistant"}{" "}
               <Icon name="arrow" size={17} />
             </Link>
+          </section>
+          <section className="content-section workspace-summary">
+            <h2>Needs your attention</h2>
+            <Link to="/approvals">{workspace?.workItems.filter((item) => item.status === "needs_review").length ?? 0} approvals</Link>
+            <Link to="/work">{workspace?.workItems.filter((item) => item.status === "queued").length ?? 0} queued requests</Link>
+            <Link to="/inbox">{workspace?.captures.filter((item) => item.status === "open").length ?? 0} inbox items</Link>
           </section>
         </div>
       </div>
@@ -567,7 +625,7 @@ function TaskForm({
   cancel,
 }: {
   initial?: Task;
-  save: (title: string, dueDate: string | null, priority: Priority) => boolean;
+  save: (title: string, dueDate: string | null, priority: Priority, repeat: Task["repeat"]) => boolean;
   cancel?: () => void;
 }) {
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -575,12 +633,20 @@ function TaskForm({
   const [priority, setPriority] = useState<Priority>(
     initial?.priority ?? "normal",
   );
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly">(initial?.repeat ?? "none");
+  const [validation, setValidation] = useState("");
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (title.trim() && save(title.trim(), dueDate || null, priority)) {
+    if (repeat !== "none" && !dueDate) {
+      setValidation("Choose a due date for a repeating routine.");
+      return;
+    }
+    setValidation("");
+    if (title.trim() && save(title.trim(), dueDate || null, priority, repeat === "none" ? undefined : repeat)) {
       setTitle("");
       setDueDate("");
       setPriority("normal");
+      setRepeat("none");
     }
   }
   return (
@@ -602,12 +668,13 @@ function TaskForm({
       <div className="form-grid">
         <label className="field">
           <span>
-            Due date <small>optional</small>
+            Due date <small>{repeat === "none" ? "optional" : "required for a routine"}</small>
           </span>
           <input
             type="date"
             value={dueDate}
             onChange={(event) => setDueDate(event.target.value)}
+            required={repeat !== "none"}
           />
         </label>
         <label className="field">
@@ -622,6 +689,15 @@ function TaskForm({
           </select>
         </label>
       </div>
+      <label className="field">
+        <span>Repeat</span>
+        <select value={repeat} onChange={(event) => setRepeat(event.target.value as typeof repeat)}>
+          <option value="none">Does not repeat</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </label>
+      {validation && <p className="field-error" role="alert">{validation}</p>}
       <div className="form-actions">
         <button className="button primary" type="submit">
           {initial ? "Save changes" : "Add task"}
@@ -701,7 +777,7 @@ export function TasksPage() {
                       ...current,
                       tasks: current.tasks.map((item) =>
                         item.id === id
-                          ? { ...item, completed: !item.completed }
+                          ? toggleTaskCompletion(item)
                           : item,
                       ),
                     }))
@@ -733,13 +809,13 @@ export function TasksPage() {
             key={editing?.id ?? "new"}
             initial={editing ?? undefined}
             cancel={editing ? () => setEditing(null) : undefined}
-            save={(title, dueDate, priority) => {
+            save={(title, dueDate, priority, repeat) => {
               const saved = commit((current) => ({
                 ...current,
                 tasks: editing
                   ? current.tasks.map((task) =>
                       task.id === editing.id
-                        ? { ...task, title, dueDate, priority }
+                        ? { ...task, title, dueDate, priority, repeat }
                         : task,
                     )
                   : [
@@ -750,6 +826,7 @@ export function TasksPage() {
                         dueDate,
                         priority,
                         completed: false,
+                        repeat,
                       },
                     ],
               }));
@@ -866,6 +943,17 @@ export function CalendarPage() {
   const [editing, setEditing] = useState<DatedItem | null>(null);
   const [showPast, setShowPast] = useState(false);
   const now = useCurrentTime();
+  const [alertPermission, setAlertPermission] = useState<NotificationPermission | "unsupported">(
+    typeof Notification === "undefined" ? "unsupported" : Notification.permission,
+  );
+  async function enableAlerts() {
+    if (typeof Notification === "undefined") return;
+    try {
+      setAlertPermission(await Notification.requestPermission());
+    } catch {
+      setAlertPermission("denied");
+    }
+  }
   if (!data) return null;
   const items = data.events
     .filter(
@@ -965,10 +1053,15 @@ export function CalendarPage() {
               return saved;
             }}
           />
-          <p className="aside-note">
-            Reminders appear here; this demo does not send notifications. Times
-            use your local timezone.
-          </p>
+          <div className="workspace-notice">
+            <strong>Active reminders while AIOps is open</strong>
+            <p>Due reminders appear at the top of the app. Browser alerts also work while this page is open if you enable them. Closed-tab or phone delivery needs a backend.</p>
+            {alertPermission === "default" && <button className="button secondary" type="button" onClick={() => { void enableAlerts(); }}>Enable browser alerts</button>}
+            {alertPermission === "granted" && <p>Browser alerts enabled.</p>}
+            {alertPermission === "denied" && <p>Browser alerts are blocked in your browser settings.</p>}
+            {alertPermission === "unsupported" && <p>This browser does not support page alerts.</p>}
+          </div>
+          <p className="aside-note">Times use your local timezone.</p>
         </aside>
       </div>
     </div>
@@ -1173,13 +1266,21 @@ function Message({
 
 export function AssistantPage() {
   const { data, commit, send, retry } = useDemo();
+  const { data: workspace } = useWorkspace();
   const [params, setParams] = useSearchParams();
   const [draft, setDraft] = useState("");
   const [failNext, setFailNext] = useState(false);
-  if (!data) return null;
+  if (!data || !workspace) return null;
+  const requestedAgent = params.get("agent");
+  const activeAgent = requestedAgent === "general"
+    ? null
+    : workspace.agents.find((item) => item.id === requestedAgent) ?? workspace.agents[0] ?? null;
+  const conversations = data.conversations.filter((item) =>
+    (item.agentId ?? null) === (activeAgent?.id ?? null),
+  );
   const conversation =
-    data.conversations.find((item) => item.id === params.get("conversation")) ??
-    data.conversations[0];
+    conversations.find((item) => item.id === params.get("conversation")) ??
+    conversations[0];
   const sending =
     conversation?.messages.some((message) => message.status === "pending") ??
     false;
@@ -1189,12 +1290,12 @@ export function AssistantPage() {
       commit((current) => ({
         ...current,
         conversations: [
-          { id, title: "New conversation", messages: [] },
+          { id, title: "New conversation", messages: [], agentId: activeAgent?.id },
           ...current.conversations,
         ],
       }))
     ) {
-      setParams({ conversation: id });
+      setParams({ agent: activeAgent?.id ?? "general", conversation: id });
       setDraft("");
     }
   }
@@ -1220,8 +1321,15 @@ export function AssistantPage() {
             Assistant<span className="period">.</span>
           </h1>
           <p className="page-subtitle">
-            Explore scripted examples and review suggestions before saving.
+            Talk within one agent's workspace. Replies are scripted examples until the backend assistant is connected.
           </p>
+          <label className="field chat-agent-picker">
+            <span>Conversation with</span>
+            <select value={activeAgent?.id ?? "general"} onChange={(event) => { setParams({ agent: event.target.value }); setDraft(""); }}>
+              {workspace.agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
+              <option value="general">General demo</option>
+            </select>
+          </label>
         </div>
         <button className="button primary" type="button" onClick={create}>
           <Icon name="plus" size={17} /> New conversation
@@ -1230,13 +1338,13 @@ export function AssistantPage() {
       <div className="chat-layout">
         <aside className="conversation-list">
           <div className="conversation-heading">CONVERSATIONS</div>
-          {data.conversations.map((item) => (
+          {conversations.map((item) => (
             <button
               key={item.id}
               type="button"
               className={`conversation-item ${item.id === conversation?.id ? "selected" : ""}`}
               onClick={() => {
-                setParams({ conversation: item.id });
+                setParams({ agent: activeAgent?.id ?? "general", conversation: item.id });
                 setDraft("");
               }}
             >
@@ -1250,7 +1358,7 @@ export function AssistantPage() {
             <>
               <div className="chat-panel-heading">
                 <div>
-                  <span className="eyebrow">LOCAL DEMO CONVERSATION</span>
+                  <span className="eyebrow">LOCAL DEMO ? {activeAgent?.name ?? "GENERAL"}</span>
                   <h2>{conversation.title}</h2>
                 </div>
                 <span className="chat-count">
@@ -1308,7 +1416,7 @@ export function AssistantPage() {
                   </button>
                 </div>
                 <p className="composer-note">
-                  Scripted replies only. No message is sent to an AI service.
+                  Scripted replies only. No agent reads connected accounts or completes work here.
                 </p>
               </form>
             </>
