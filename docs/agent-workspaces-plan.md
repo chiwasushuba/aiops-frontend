@@ -1,4 +1,4 @@
-﻿# Agent workspaces and backend handoff
+# Agent workspaces and backend handoff
 
 Status: frontend-only prototype implemented 2026-09-25; every HTTP contract below is proposed backend work. The sibling Spring Boot backend currently exposes users and individual messages CRUD only. Those routes are not sign-in, conversations, work execution, or connected-service APIs.
 
@@ -76,7 +76,7 @@ For an agent run use bounded states: `queued -> running -> awaiting_approval -> 
 ## Connector order and feasibility
 
 1. **DLSU Canvas LMS:** start with read-only courses, assignments, and due dates for the School Agent; optionally share selected course data with Study Coach. Canvas exposes an API with OAuth2 and developer keys, but keys and endpoint scopes are controlled by the institution. Confirm DLSU enables an appropriate key before promising automatic sync. See [Canvas OAuth2](https://canvas.instructure.com/doc/api/file.oauth.html) and [developer keys](https://sso.canvaslms.com/doc/api/file.developer_keys.html).
-2. **One mail provider:** choose Gmail or Outlook based on the user's account. Start with selected read/search, then draft, then exact reviewed send. Gmail read scopes are restricted and can add verification/security requirements; request narrow scopes. See [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes) and [Microsoft Graph permissions](https://learn.microsoft.com/en-us/graph/permissions-reference).
+2. **Mail provider:** Gmail is the first connection for the owner's recurring task check-ins. Request only the send capability for this slice; reading mail and agent-authored sends are separate capabilities. Agent-authored sends still require exact reviewed approval. See [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes).
 3. **One calendar provider:** choose Google or Outlook. Read selected calendars and availability before adding approved event creation. See [Google Calendar scopes](https://developers.google.com/workspace/calendar/api/auth) and [Microsoft Graph calendar API](https://learn.microsoft.com/en-us/graph/api/resources/calendar-overview?view=graph-rest-1.0).
 4. **GitHub:** accept repository and GitHub Projects board links as references in the frontend. Reading repository README/Markdown files and reading Projects board items are different backend operations. Choose which to implement first based on the user's actual links; private resources need authorized access. For repositories, fetch selected files server-side with a bounded repository/path allowlist and record source commit SHA. See [GitHub repository contents API](https://docs.github.com/en/rest/repos/contents) and [GitHub Projects API guidance](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects).
 
@@ -97,10 +97,9 @@ Before broader automatic behavior, verify tool denial, prompt injection in retri
 
 ## Open implementation decisions
 
-- Which email and calendar provider should be built first?
+- Which calendar provider should be built first?
 - Can the DLSU Canvas account authorize a developer-key integration, and which courses may be read?
 - Are the links repositories, GitHub Projects boards, or both, and are they public or private?
-- Which reminder delivery channel should run when the app is closed? What are the timezone and quiet-hour settings?
+- Gmail is the first closed-app channel for unfinished-task check-ins. The owner's timezone, destination address, and any custom quiet hours must be selected before enabling it.
 - What are the retention and deletion rules for uploaded Markdown, provider excerpts, conversations, and work history?
 - Which model provider, per-run budget, timeout, and allowed agent actions should the backend use first?
-

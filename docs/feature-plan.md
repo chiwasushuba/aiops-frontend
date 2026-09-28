@@ -1,4 +1,4 @@
-﻿# Personal AIOps feature plan
+# Personal AIOps feature plan
 
 Status: frontend prototype updated 2026-09-25. This is a private, single-user product. The backend implementation is still separate work.
 
@@ -23,8 +23,15 @@ All records below are browser-local demo data. They survive refresh in the same 
 | Capture inbox | Save a thought, send it to an agent work request, archive it, or reopen it. |
 | Sign-in | `/login` and `/signup` are explanatory placeholders. There is no account or remote privacy boundary yet. |
 
+The sidebar groups agent profiles, chat, work queue, approvals, and connections under **Agents**. Tabs within that area switch between those existing routes; direct links to each route remain available. Today, tasks, calendar, and capture inbox remain separate sidebar destinations.
+
 The demo uses two local-storage records: existing tasks/events/conversations in `aiops-frontend-demo-v1`, and new agent/work/inbox state in `aiops-workspace-demo-v1`. Reset sample data replaces both. The task record adds an optional repeat field, and conversations add an optional agent ID, so older stored demo records remain readable. A due reminder stays active until 30 minutes after the dated item's start while the app is open. Local Markdown content and messages are plain browser storage; use non-sensitive examples in the prototype.
 
+## Email check-ins for unfinished tasks (requested 2026-09-26)
+
+The first off-browser notification channel should be a Gmail check-in for unfinished tasks with due dates. Send one digest of eligible tasks per scheduled slot, not a separate message for every task. Use the owner's chosen IANA timezone; a date-only deadline ends at 23:59 in that timezone. Proposed initial schedule: one digest at 09:00 each day while a task is within seven days of its deadline; on its due date, also send at 15:00 and 21:00 if it remains unfinished. After the deadline, return to one 09:00 digest each day until completion or deletion. Never send an empty digest. Completing a task removes it from the next digest; a repeating task is eligible again when its next occurrence approaches. Provide an on/off control and show the next scheduled check-in and last delivery outcome.
+
+This is a backend feature, not current frontend behavior. Tasks and completion must first be persisted server-side. The backend needs owner authentication, a narrow Gmail send connection with server-held credentials, a durable schedule and delivery record, and a scheduler that runs while the browser is closed. An explicit user action must enable recurring sends to the selected address. A scheduled send is covered by that standing consent; agent-generated email drafts still require review of their exact content. Prevent duplicate sends for the same owner and scheduled slot, and pause delivery visibly when Gmail authorization expires or a send fails. The current local task list and disconnected Gmail card must not claim delivery is active.
 ## Confirmed priority order
 
 1. **Own agents with names.** Start with the four named agents above; allow later creation and editing without a deployment. Each agent has a separate conversation and explicit source/access settings.
@@ -54,4 +61,3 @@ The detailed backend contracts and connector boundaries are in [configurable age
 - Reminder channel, quiet hours, timezone, and how to handle missed reminders.
 - Retention and deletion rules for conversations, Markdown content, source excerpts, work runs, and archived agents.
 - Model provider, cost limit, run timeout, and the initial set of jobs an agent may perform.
-

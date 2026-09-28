@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, NavLink, Outlet, useSearchParams } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { DemoProvider } from "./DemoContext";
 import { WorkspaceProvider } from "./WorkspaceContext";
 import { useWorkspace } from "./useWorkspace";
@@ -159,15 +159,20 @@ function Shell() {
   const { data, error, reload, reset } = useDemo();
   const { data: workspace, error: workspaceError, reload: reloadWorkspace, reset: resetWorkspace } = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
+  const { pathname } = useLocation();
+  const agentTabs = [
+    { to: "/agents", label: "Profiles" },
+    { to: "/assistant", label: "Chat" },
+    { to: "/work", label: "Work queue" },
+    { to: "/approvals", label: "Approvals" },
+    { to: "/connections", label: "Connections" },
+  ];
+  const inAgents = agentTabs.some(({ to }) => pathname === to);
   const nav: { to: string; label: string; icon: IconName; end?: boolean }[] = [
     { to: "/", label: "Today", icon: "home", end: true },
     { to: "/tasks", label: "Tasks", icon: "check" },
     { to: "/calendar", label: "Calendar", icon: "calendar" },
-    { to: "/assistant", label: "Assistant", icon: "chat" },
     { to: "/agents", label: "Agents", icon: "spark" },
-    { to: "/work", label: "Work queue", icon: "check" },
-    { to: "/approvals", label: "Approvals", icon: "clock" },
-    { to: "/connections", label: "Connections", icon: "calendar" },
     { to: "/inbox", label: "Capture inbox", icon: "plus" },
   ];
   return (
@@ -190,8 +195,9 @@ function Shell() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `nav-item ${isActive ? "active" : ""}`
+                `nav-item ${isActive || (item.to === "/agents" && inAgents) ? "active" : ""}`
               }
+              aria-current={item.to === "/agents" && inAgents ? "page" : undefined}
             >
               <Icon name={item.icon} />
               {item.label}
@@ -228,6 +234,8 @@ function Shell() {
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                className={({ isActive }) => isActive || (item.to === "/agents" && inAgents) ? "active" : ""}
+                aria-current={item.to === "/agents" && inAgents ? "page" : undefined}
                 onClick={() => setNavOpen(false)}
               >
                 <Icon name={item.icon} />
@@ -266,7 +274,18 @@ function Shell() {
         <ActiveReminders />
         <main className="page-content">
           {data && workspace ? (
-            <Outlet />
+            <>
+              {inAgents && (
+                <nav className="agent-tabs" aria-label="Agent features">
+                  {agentTabs.map((tab) => (
+                    <NavLink key={tab.to} to={tab.to} end>
+                      {tab.label}
+                    </NavLink>
+                  ))}
+                </nav>
+              )}
+              <Outlet />
+            </>
           ) : (
             <div className="empty-state">
               <h1>Demo data is unavailable</h1>

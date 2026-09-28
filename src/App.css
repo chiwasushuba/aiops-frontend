@@ -158,6 +158,38 @@
   margin: 0 auto;
   padding: 48px clamp(24px, 4vw, 65px) 80px;
 }
+/* Route links keep each agent feature addressable while sharing one sidebar entry. */
+.agent-tabs {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  border-bottom: 1px solid #dce5da;
+  margin: -20px 0 34px;
+  scrollbar-width: thin;
+}
+
+.agent-tabs a {
+  flex: none;
+  padding: 12px 15px;
+  border-bottom: 3px solid transparent;
+  color: #526b5b;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agent-tabs a:hover,
+.agent-tabs a:focus-visible {
+  color: #173c3d;
+  background: #eef3eb;
+}
+
+.agent-tabs a[aria-current="page"] {
+  border-bottom-color: #b76548;
+  color: #173c3d;
+}
+
 .eyebrow {
   font-size: 10px;
   line-height: 1.4;
