@@ -1,6 +1,6 @@
 # Personal AIOps feature plan
 
-Status: frontend prototype updated 2026-09-25. This is a private, single-user product. The backend implementation is still separate work.
+Status: frontend prototype updated 2026-09-25. This is a private, single-user product. Core backend APIs were implemented on 2026-09-29; frontend integration remains separate work. See [the backend API contract](../../aiops-backend/docs/api.md).
 
 ## Product goal
 
@@ -29,9 +29,20 @@ The demo uses two local-storage records: existing tasks/events/conversations in 
 
 ## Email check-ins for unfinished tasks (requested 2026-09-26)
 
-The first off-browser notification channel should be a Gmail check-in for unfinished tasks with due dates. Send one digest of eligible tasks per scheduled slot, not a separate message for every task. Use the owner's chosen IANA timezone; a date-only deadline ends at 23:59 in that timezone. Proposed initial schedule: one digest at 09:00 each day while a task is within seven days of its deadline; on its due date, also send at 15:00 and 21:00 if it remains unfinished. After the deadline, return to one 09:00 digest each day until completion or deletion. Never send an empty digest. Completing a task removes it from the next digest; a repeating task is eligible again when its next occurrence approaches. Provide an on/off control and show the next scheduled check-in and last delivery outcome.
+The first off-browser notification channel should be a Gmail check-in for unfinished tasks with due dates. Send one digest of eligible tasks per scheduled slot, not a separate message for every task. Use the owner's chosen IANA timezone; a date-only deadline ends at 23:59 in that timezone. Implemented backend schedule: one digest at 09:00 each day while a task is within seven days of its deadline; on its due date, also send at 15:00 and 21:00 if it remains unfinished. After the deadline, return to one 09:00 digest each day until completion or deletion. Never send an empty digest. Completing a task removes it from the next digest; a repeating task is eligible again when its next occurrence approaches. Provide an on/off control and show the next scheduled check-in and last delivery outcome.
 
-This is a backend feature, not current frontend behavior. Tasks and completion must first be persisted server-side. The backend needs owner authentication, a narrow Gmail send connection with server-held credentials, a durable schedule and delivery record, and a scheduler that runs while the browser is closed. An explicit user action must enable recurring sends to the selected address. A scheduled send is covered by that standing consent; agent-generated email drafts still require review of their exact content. Prevent duplicate sends for the same owner and scheduled slot, and pause delivery visibly when Gmail authorization expires or a send fails. The current local task list and disconnected Gmail card must not claim delivery is active.
+This is implemented in the backend, not current frontend behavior. Tasks and completion are persisted server-side. The backend now has owner authentication, a narrow Gmail send connection with encrypted server-held credentials, durable delivery records, and a scheduler that runs while the browser is closed. An explicit user action must enable recurring sends to the selected address. A scheduled send is covered by that standing consent; agent-generated email drafts still require review of their exact content. Prevent duplicate sends for the same owner and scheduled slot, and pause delivery visibly when Gmail authorization expires or a send fails. The current local task list and disconnected Gmail card must not claim delivery is active.
+## Backend implementation update (2026-09-29)
+
+The sibling backend now implements owner sessions, agents and Markdown sources,
+conversations, durable OpenAI `gpt-6-luna` runs, work notes/retry/cancellation,
+internal task/event approvals, tasks and recurring occurrences, local calendar
+items, durable in-app reminder records, captures, Today, export and deletion.
+The owner chose private access from anywhere and later requested Gmail task check-ins. The backend now supports them, but live sending still requires Google OAuth setup, a connected Gmail account, and explicit destination/schedule opt-in.
+Remote deployment and live OpenAI account access require server configuration.
+All frontend behavior above remains browser-local until integration is added;
+there is no automatic import of prototype records or provider connection.
+
 ## Confirmed priority order
 
 1. **Own agents with names.** Start with the four named agents above; allow later creation and editing without a deployment. Each agent has a separate conversation and explicit source/access settings.
