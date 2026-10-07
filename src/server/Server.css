@@ -1,0 +1,97 @@
+.server-mobile {
+  display: none;
+}
+.server-layout .workspace-panel + .workspace-panel {
+  margin-top: 18px;
+}
+.server-layout .workspace-panel {
+  margin-bottom: 18px;
+}
+.server-layout .field {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.server-layout .field input,
+.server-layout .field select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d8e1d8;
+  border-radius: 6px;
+  background: white;
+}
+.server-layout pre,
+.server-layout .saved-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.6;
+}
+.server-layout .error-banner {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.server-layout .sidebar-bottom {
+  display: grid;
+  gap: 6px;
+}
+.server-layout .source-choice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+.server-layout .workspace-actions {
+  flex-wrap: wrap;
+}
+.server-layout details {
+  margin-top: 12px;
+}
+.server-layout summary {
+  cursor: pointer;
+}
+.server-layout h1 {
+  font:
+    normal 38px/1.2 Georgia,
+    serif;
+  color: #24433b;
+}
+.server-layout .work-status {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.server-auth {
+  max-width: 520px;
+  margin: 8vh auto;
+  padding: 28px;
+}
+.server-auth .field {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+.server-auth input {
+  padding: 12px;
+  width: 100%;
+}
+@media (max-width: 900px) {
+  .server-layout .sidebar {
+    display: none;
+  }
+  .server-layout .main-wrap {
+    margin-left: 0;
+  }
+  .server-mobile {
+    display: block;
+    padding: 18px;
+    background: #fff;
+  }
+  .server-mobile nav {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    font-size: 13px;
+  }
+}

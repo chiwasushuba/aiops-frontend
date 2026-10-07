@@ -1,27 +1,27 @@
 import { createBrowserRouter } from "react-router-dom";
-import App, { AssistantPage, CalendarPage, Dashboard, TasksPage } from "./App";
+import Layout from "./server/Layout";
+import { Today, Tasks, Calendar, Connections, Inbox } from "./server/Records";
+import Chat from "./server/Chat";
 import LoginPage from "./pages/login/Page";
 import SignupPage from "./pages/signup/Page";
-import AgentsPage from "./pages/agents/Page";
-import WorkPage from "./pages/work/Page";
-import ApprovalsPage from "./pages/approvals/Page";
-import ConnectionsPage from "./pages/connections/Page";
-import InboxPage from "./pages/inbox/Page";
+import AgentsPage from "./server/Employees";
+import WorkPage from "./server/Work";
+import ApprovalsPage from "./server/Approvals";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,
+    element: <Layout />,
     children: [
-      { index: true, element: <Dashboard /> },
-      { path: "tasks", element: <TasksPage /> },
-      { path: "calendar", element: <CalendarPage /> },
-      { path: "assistant", element: <AssistantPage /> },
+      { index: true, element: <Today /> },
+      { path: "tasks", element: <Tasks /> },
+      { path: "calendar", element: <Calendar /> },
+      { path: "assistant", element: <Chat /> },
       { path: "agents", element: <AgentsPage /> },
       { path: "work", element: <WorkPage /> },
       { path: "approvals", element: <ApprovalsPage /> },
-      { path: "connections", element: <ConnectionsPage /> },
-      { path: "inbox", element: <InboxPage /> },
+      { path: "connections", element: <Connections /> },
+      { path: "inbox", element: <Inbox /> },
     ],
   },
   { path: "/login", element: <LoginPage /> },

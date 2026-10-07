@@ -1,5 +1,12 @@
 # Personal AIOps feature plan
 
+Implementation update 2026-10-07: the main router now uses authenticated backend
+records for profiles/Markdown, chat, jobs/results, internal approvals, tasks,
+local calendar/reminders, captures, connections metadata, and Today. Historical
+prototype behavior below is retained as planning history, not current routing.
+No demo import occurs. Google employee tools and external actions remain later
+phases of [the architecture plan](../../.codex/docs/ai-employee-architecture-plan.md).
+
 Status: frontend prototype updated 2026-09-25. This is a private, single-user product. Core backend APIs were implemented on 2026-09-29; frontend integration remains separate work. See [the backend API contract](../../aiops-backend/docs/api.md).
 
 ## Product goal

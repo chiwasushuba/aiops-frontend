@@ -2,12 +2,12 @@ import { Link } from "react-router-dom";
 
 const SignupPage = () => (
   <main className="auth-placeholder">
-    <h1>Sign up is not available in this demo.</h1>
+    <h1>This workspace has one private owner.</h1>
     <p>
-      This is a browser-local prototype with sample data. There is no account
-      creation yet.
+      Public account creation is unavailable. Use the owner credentials
+      configured on the backend.
     </p>
-    <Link to="/">Open the demo dashboard</Link>
+    <Link to="/login">Sign in</Link>
   </main>
 );
 
